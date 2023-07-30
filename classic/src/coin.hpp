@@ -1,21 +1,39 @@
 #pragma once
 
+#define WHITE 0
+#define BLACK 1
+#define HINT  2
+
 class Coin{
 public:
+  typedef enum{
+    CWHITE,
+    CBLACK,
+    CHINT
+  }COLOR;
   Coin(){
-    y=x=0;
-    icon=' ';
+    upper_color = CWHITE;
   }
-  Coin(int y, int x, char ch){
-    this->x = x;
-    this->y = y;
-    this->icon = ch;
+  Coin& operator = (const Coin& rhs){
+    if (this != &rhs)
+    { 
+      this->upper_color = rhs.upper_color;
+    }
+    return *this;
   }
-  int getX(){return x;}
-  int getY(){return y;}
-  char getIcon(){return icon;}
+  void PutOn(COLOR _color){
+    upper_color = _color;
+  }
+  COLOR UpColor(){
+    return upper_color;
+  }
+  void Flip(){
+    if(upper_color == CBLACK){
+      upper_color = CWHITE;
+    }else{
+      upper_color = CBLACK;
+    }
+  }
 private:
-  int x;
-  int y;
-  char icon;
+  COLOR upper_color;
 };
