@@ -29,9 +29,6 @@ int main(int argc, char ** argv)
 
   while(game.processInput())
   {
-    if(game.isOver()){
-      break;
-    }
     game.redraw();
   }
   endwin();

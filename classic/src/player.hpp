@@ -38,15 +38,14 @@ public:
       }
     }
     vector<stPos> candidates;
-    getCandidate(candidates, top_board);
+    getCandidate(candidates, top_board, true);
     for(auto it = candidates.begin();it!=candidates.end();it++){
       h->push_back(pair<int,int>(it->y,it->x));
     }
     return;
   } 
-  void DoPlay(){
+  bool DoPlay(){
     virtualBoard top_board;
-    dprint("Player(%s) has %d Coins.", (myColor == Coin::CWHITE)? "White":"Black", coinbag.size());
     top_board.size = board->getH() * board->getW();
     for(int y = 0; y < board->getH();y++){
       for(int x = 0;x < board->getW();x++){
@@ -54,11 +53,23 @@ public:
       }
     }
     stPos best_action;
-    if(INT_MIN < minimax(&best_action, top_board, 3, true)){
+    int depth = 0;
+    if(myColor == Coin::CBLACK){
+      depth = 1;
+    }else if(myColor == Coin::CWHITE){
+      depth = 2;
+    }
+    int val = minimax(&best_action, top_board, depth, true);
+    if(INT_MIN == val){
+      return false;
+    }else{
       Coin* coin = coinbag.top();
       coinbag.pop();
+      dprint("Action : %d, %c", best_action.x + 1, 'a'+best_action.y);
       board->PutCoinOnBoard(best_action.y, best_action.x, *coin);
+      return true;
     }
+    return false;
   }
   int heuristicsValue(virtualBoard& board){
     int score_ally = 0;
@@ -72,7 +83,7 @@ public:
     }
     return score_ally - score_enemy;
   }
-  int minimax(stPos* next_action, virtualBoard& board, int depth, bool maxplayer) {
+  int minimax(stPos* next_action, virtualBoard& board, int depth, bool ally) {
     int value = 0;
     stPos best_action;
     vector<stPos> candidates;
@@ -80,25 +91,29 @@ public:
     if(depth == 0){
       return heuristicsValue(board);
     }
-    value = maxplayer ? INT_MIN:INT_MAX;
-    getCandidate(candidates, board);
-    
+    value = ally ? INT_MIN:INT_MAX;
+    getCandidate(candidates, board, ally);
+    if(candidates.size() == 0){
+      return value;
+    }
     for(auto it = candidates.begin();it != candidates.end();it++){
       next_board = board;
       next_board.PutOn(it->y, it->x, ALLY);
-      int each_value = minimax(&best_action,next_board, depth - 1, !maxplayer);
-      if((maxplayer && value < each_value) || (!maxplayer && value > each_value)){
+      int each_value = minimax(&best_action,next_board, depth - 1, !ally);
+      if((ally && value < each_value) || (!ally && value > each_value)){
         value = each_value;
         *next_action = *it;
       }
     }
     return value;
   }
-  void getCandidate(vector<stPos> &candidates, virtualBoard &board){
+  void getCandidate(vector<stPos> &candidates, virtualBoard &board, bool ally){
 	  int r;
 	  static int dxy[8] = { -8, -7, 1, 9, 8, 7, -1, -9 };
+    int my = ally? ALLY:ENEMY;
+    int anti = !ally? ALLY:ENEMY;
     for(int i = 0;i<board.board_length * board.board_length;i++){
-      if(board.contents[i] != ALLY){
+      if(board.contents[i] != my){
         continue;
       }
       for(int ui = 0;ui < 8;ui++){
@@ -106,21 +121,33 @@ public:
         int k;
         for(k = 0 ; k < 10; k++)
         {
+          if(dxy[ui] == 1 || dxy[ui] == -7 || dxy[ui] == 9){
+            if(r % 8 <= i % 8){
+              k = 0;
+              break;
+            }
+          }
+          if(dxy[ui] == -1 || dxy[ui] == -9 || dxy[ui] == 7){
+            if(r % 8 >= i % 8){
+              k = 0;
+              break;
+            }
+          }
           if(r < 0 || 64 <= r){
             k = 0;
             break;
           }
-          if(board.contents[r] == ENEMY){
+          if(board.contents[r] == anti){
             r += dxy[ui];
           }
-          else if(board.contents[r] == ALLY){
+          else if(board.contents[r] == my){
             k = 0;
             break;
           }else{
             break;
           }
         }
-        if(k > 0 && board.contents[r] == EMPTY)
+        if(k > 0)
         {
           stPos p;
           p.x = r % board.board_length;

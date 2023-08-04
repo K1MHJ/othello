@@ -65,6 +65,19 @@ public:
     mvwprintw(debug_win,1,1,buffer);
     wrefresh(debug_win);
   }
+  void printr(const char* format, ...){
+    char buffer[256];
+    int width = getmaxx(report_win);
+    va_list ap;
+    va_start(ap, format);
+    vsnprintf(buffer, 256, format, ap);
+    va_end(ap);
+    for(int i = strlen(buffer);i<width-2;i++){
+      strcat(buffer, " ");
+    }
+    mvwprintw(report_win,1,1,buffer);
+    wrefresh(report_win);
+  }
   void selectMenu(){
     if(menu_select < 0){
       menu_select = 0;

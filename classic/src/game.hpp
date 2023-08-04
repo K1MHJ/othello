@@ -13,6 +13,8 @@ extern Gui* gui;
 void dprint(const char* format, ...);
 
 class Game{
+  int score_white;
+  int score_black;
   bool game_over;
   Coin coins[100];
   GameBoard board = GameBoard(8,8);
@@ -39,14 +41,21 @@ public:
   }
   bool processInput(){
     if(gui->getInput(menu_selected, &key_input)){
-      dprint("Pressed %s", menu_selected);
       if(0 == strcmp(menu_selected, "Quit")){
         return false;
       }else if(0 == strcmp(menu_selected, "Next")){
-        Next();
-        ShowNextTurn();
+        if(!game_over){
+          Next();
+        }else{
+          dprint("Game Over");
+          dprint("Press Reset to continue.");
+        }
       }else if(0 == strcmp(menu_selected, "Reset")){
+        dprint("Pressed Reset");
+        gui->initialize();
         Reset();
+        ShowNextTurn();
+        game_over = false;
       }
     }
     return true;
@@ -57,10 +66,9 @@ public:
   void ShowHint(){
     vector<pair<int,int>> h;
     player[playturn].ShowHint(&h); 
-    dprint("Hint:%s %d",(playturn == WHITE)?"White":"Black", h.size());
     gui->clearNotCoin();
     for(auto it = h.begin();it!=h.end();it++){
-      gui->addAt(it->first, it->second, 'O');
+      gui->addAt(it->first, it->second, '*');
     }
   }
   void Reset(){
@@ -74,17 +82,71 @@ public:
     player[0].RemoveCoins();
     player[1].RemoveCoins();
     for(;coin_no >= 0;coin_no--){
-      player[coin_no % 2].TakeCoin(coins[coin_no]);
+      switch(coin_no % 2){
+        case WHITE:
+          coins[coin_no].PutOn(Coin::CWHITE);
+          player[WHITE].TakeCoin(coins[coin_no]);
+        break;
+        case BLACK:
+          coins[coin_no].PutOn(Coin::CBLACK);
+          player[BLACK].TakeCoin(coins[coin_no]);
+        break;
+      }
     }
     playturn = WHITE;
   }
+  void JudgeWinLose(){
+    for(int y=0;y<8;y++){
+      for(int x=0;x<8;x++){
+        Coin* c = board.getCoin(y, x);
+        if(c != nullptr){
+          if(Coin::CWHITE == c->UpColor()){
+            score_white++;
+          }else{
+            score_black++;
+          }
+        }
+      }
+    }
+    if(score_white > score_black){
+      dprint("Winner is White!");
+    }else if(score_white < score_black){
+      dprint("Winner is Black!");
+    }else{
+      dprint("No One win!!");
+    }
+    game_over = true;
+  }
+  void ShowScoreBoard(){
+    score_black = score_white = 0;
+    for(int y=0;y<8;y++){
+      for(int x=0;x<8;x++){
+        Coin* c = board.getCoin(y, x);
+        if(c != nullptr){
+          if(Coin::CWHITE == c->UpColor()){
+            score_white++;
+          }else{
+            score_black++;
+          }
+        }
+      }
+    }
+    gui->printr("SCORE White:Black = %d : %d", score_white, score_black);
+  }
   void Next(){
+    if(!player[playturn].DoPlay()){
+      ShowScoreBoard();
+      JudgeWinLose();
+      return;
+    }
+    ShowScoreBoard();
     if(playturn == WHITE){
       playturn = BLACK;
     }else{
       playturn = WHITE;
     }
-    player[playturn].DoPlay(); 
+    dprint("Next Player is %s", (playturn == BLACK)? "Black":"White");
+    ShowNextTurn();
   }
   void redraw(){
     gui->drawBoardContents(board);
